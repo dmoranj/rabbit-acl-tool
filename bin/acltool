@@ -53,6 +53,10 @@ function refreshPermissions() {
     sendCommand('refresh', '');
 }
 
+function clearTables() {
+    sendCommand('clear', '');
+}
+
 function savePermissions() {
     sendCommand('save', '');
 }
@@ -85,6 +89,14 @@ try {
             savePermissions();
         });
 
+    program
+        .command('clear')
+        .description('Clear all the ACL Permissions from memory.')
+        .action(function (command) {
+            console.log('Clearing permissions list');
+            clearTables
+            ();
+        });
 
     program.parse(process.argv);
 
