@@ -33,7 +33,8 @@ var async = require('async'),
         login: '',
         password: ''
     },
-    host = 'localhost';
+    host = 'localhost',
+    adminExchange = '_topicacladmin';
 
 function errorHandler(error) {
     console.log('Error performing operation: %s', error);
@@ -59,57 +60,62 @@ function createChannel(conn, callback) {
     conn.createChannel(callback);
 }
 
-function sendCommand(key, msg, ch, callback) {
-    var ex = '_topicacladmin';
-    var args = process.argv.slice(2);
+function sendCommand(ex) {
+    return function(key, msg, ch, callback) {
+        var args = process.argv.slice(2);
 
-    ch.assertExchange(ex, 'topic', {});
-    ch.publish(ex, key, new Buffer(msg));
+        ch.assertExchange(ex, 'topic', {});
+        ch.publish(ex, key, new Buffer(msg));
 
-    callback();
+        callback();
+    };
 }
 
-function endOperation(error) {
-    if (error) {
-        console.log('Operation could not be completed');
-    }
+function endOperation(exit) {
+    return function(error) {
+        if (error) {
+            console.log('Operation could not be completed');
+        }
 
-    setTimeout(function() {
-        process.exit(0);
-    }, 500);
+        if (exit) {
+            setTimeout(function() {
+                process.exit(0);
+            }, 500);
+        }
+    };
 }
 
-function addPermission(user, topic, permission) {
-    var payload = user + ' ' + topic + ' ' + permission + ';';
+function addPermission(user, permission, topic) {
+    var payload = user + ' ' + permission + ' ' + topic  + ';';
     async.waterfall([
         getConnection,
         createChannel,
-        apply(sendCommand, 'add', payload)
-    ], endOperation);
+        apply(sendCommand(adminExchange), 'add', payload)
+    ], endOperation(true));
 }
 
-function readFrom(topic, ch, callback) {
-    var ex = '_topicacladmin';
+function readFrom(ex) {
+    return function(topic, ch, callback) {
+        ch.assertExchange(ex, 'topic', {durable: true});
 
-    ch.assertExchange(ex, 'topic', {durable: true});
+        ch.assertQueue('', {exclusive: false}, function(err, q) {
+            console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+            ch.bindQueue(q.queue, ex, topic);
 
-    ch.assertQueue('', {exclusive: false}, function(err, q) {
-        console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
-        ch.bindQueue(q.queue, ex, topic);
+            ch.consume(q.queue, function(msg) {
+                console.log(" [x] %s", msg.content.toString());
+            }, {noAck: true});
 
-        ch.consume(q.queue, function(msg) {
-            console.log(" [x] %s", msg.content.toString());
-        }, {noAck: true});
-
-        callback();
-    });
+            callback();
+        });
+    };
 }
 
 function refreshPermissions() {
     function doOperations(ch, callback) {
         async.series([
-            apply(readFrom, 'refresh', ch),
-            apply(sendCommand, 'refresh', '', ch)
+            apply(readFrom(adminExchange), 'refresh', ch),
+            apply(sendCommand(adminExchange), 'refresh', '', ch)
         ], callback);
     }
 
@@ -117,23 +123,39 @@ function refreshPermissions() {
         getConnection,
         createChannel,
         doOperations
-    ], endOperation);
+    ], endOperation(true));
+}
+
+function listenForMessages(exchange, topic) {
+    async.waterfall([
+        getConnection,
+        createChannel,
+        apply(readFrom(exchange), topic)
+    ], endOperation(false));
+}
+
+function publishMessage(exchange, topic, msg) {
+    async.waterfall([
+        getConnection,
+        createChannel,
+        apply(sendCommand(exchange), topic, msg)
+    ], endOperation(true));
 }
 
 function clearTables() {
     async.waterfall([
         getConnection,
         createChannel,
-        apply(sendCommand, 'clear', '')
-    ], endOperation);
+        apply(sendCommand(adminExchange), 'clear', '')
+    ], endOperation(true));
 }
 
 function savePermissions() {
     async.waterfall([
         getConnection,
         createChannel,
-        apply(sendCommand, 'save', '')
-    ], endOperation);
+        apply(sendCommand(adminExchange), 'save', '')
+    ], endOperation(true));
 }
 
 function setGlobalOptions(command) {
@@ -156,12 +178,12 @@ try {
     ;
 
     program
-        .command('add <topic> <permission> [user]')
+        .command('add <permission> <topic> [user]')
         .description('Adds a new permission for the selected user or a global permission if no user is given.')
         .action(function (topic, permission, user, command, options) {
             setGlobalOptions(program);
-            console.log('Adding new permission [%s %s %s]', topic, permission, user);
-            addPermission(user || '', topic, permission);
+            console.log('Adding new permission [%s %s %s]', permission, topic, user);
+            addPermission(user || '', permission, topic);
         });
 
     program
@@ -191,8 +213,26 @@ try {
             clearTables();
         });
 
+    program
+        .command('publish <exchange> <topic> <message>')
+        .description('Publish the selected message to the given topic.')
+        .action(function (exchange, topic, message, command, options) {
+            setGlobalOptions(program);
+            publishMessage(exchange, topic, message);
+            console.log('Publishing message in Exchange [%s] with key [%s]', exchange, topic);
+        });
+
+    program
+        .command('listen <exchange> <topic>')
+        .description('Wait for and display messages from the given exchange and topic.')
+        .action(function (exchange, topic, command, options) {
+            setGlobalOptions(program);
+            listenForMessages(exchange, topic);
+            console.log('Listening in the queue for messages in Exchange [%s] with key [%s]', exchange, topic);
+        });
+
+
     program.parse(process.argv);
-    setGlobalOptions(program);
 } catch(error) {
     console.error('Error: %s', error);
 }
