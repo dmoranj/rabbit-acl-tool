@@ -196,7 +196,7 @@ try {
         });
 
     program
-        .command('save')
+        .command('save <exchange>')
         .description('Saves the ACL Database to the configured file.')
         .action(function (command, options) {
             setGlobalOptions(program);
