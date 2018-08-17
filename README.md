@@ -87,7 +87,7 @@ publish will be anonymous otherwise.
 Wait for and display messages from the given exchange and topic. The application will listen forever, until a Control-C
 break sequence is issued. It will display the text of all the received messages.
 
-## License
+## <a name="License"/> License
 
 This tool is licensed under Affero General Public License (GPL) version 3. You can find a copy of the license in the
 repository root.
