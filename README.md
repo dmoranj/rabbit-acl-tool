@@ -56,7 +56,7 @@ Next section describes the commands in detail with all its parameters.
 
 The only requirement for the tool execution is: Node.js v4.7.0+.
 
-### <a name="execution"/> Execution
+### <a name="commands"/> Commands
 
 #### add <permission> <topic> [user]
 
