@@ -8,6 +8,7 @@
   * [Excecution](#execution)
   * [Commands](#commands)
   * [Examples of use](#examples)
+* [License](#license)
 
 ## <a name="overview"/> Overview
 This tool has been developed to ease the administration of ACL-based Topic Authorization with the
@@ -56,7 +57,7 @@ Next section describes the commands in detail with all its parameters.
 
 The only requirement for the tool execution is: Node.js v4.7.0+.
 
-### <a name="execution"/> Execution
+### <a name="commands"/> Commands
 
 #### add <permission> <topic> [user]
 
@@ -87,7 +88,7 @@ publish will be anonymous otherwise.
 Wait for and display messages from the given exchange and topic. The application will listen forever, until a Control-C
 break sequence is issued. It will display the text of all the received messages.
 
-## License
+## <a name="License"/> License
 
 This tool is licensed under Affero General Public License (GPL) version 3. You can find a copy of the license in the
 repository root.
