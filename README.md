@@ -8,6 +8,7 @@
   * [Excecution](#execution)
   * [Commands](#commands)
   * [Examples of use](#examples)
+* [License](#license)
 
 ## <a name="overview"/> Overview
 This tool has been developed to ease the administration of ACL-based Topic Authorization with the
